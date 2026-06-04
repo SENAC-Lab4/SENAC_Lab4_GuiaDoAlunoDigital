@@ -39,6 +39,41 @@ BEGIN
 END;
 $$;
 
+-- Função que armazena versão anterior dos artigos sempre que
+-- título ou conteúdo é alterado
+CREATE OR REPLACE FUNCTION cms.registrar_revisao_artigo()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_editor UUID;
+BEGIN
+    v_editor := COALESCE(
+        NULLIF(current_setting('app.editor_id', true), '')::uuid,
+        auth.uid(),
+        OLD.autor_id  -- último recurso é o autor original
+    );
+    IF v_editor IS NULL THEN
+        RAISE EXCEPTION
+            'Não foi possível identificar o editor do artigo % '
+            '(defina app.editor_id na transação)', OLD.id;
+    END IF;
+
+    -- Guarda estado anterior (versão substituída)
+    INSERT INTO cms.revisoes_de_artigos (artigo_id, editor_id, titulo, conteudo)
+    VALUES (OLD.id, v_editor, OLD.titulo, OLD.conteudo);
+
+    RETURN NULL; -- depois de trigger, valor é ignorado
+END;
+$$;
+
+CREATE TRIGGER trg_artigos_revisao
+    AFTER UPDATE ON cms.artigos
+    FOR EACH ROW
+    WHEN (OLD.titulo IS DISTINCT FROM NEW.titulo
+          OR OLD.conteudo IS DISTINCT FROM NEW.conteudo)
+    EXECUTE FUNCTION cms.registrar_revisao_artigo();
+
 -- ==========================================================
 -- Função que atualiza status do artigo de 'agendado' para 'publicado'
 
