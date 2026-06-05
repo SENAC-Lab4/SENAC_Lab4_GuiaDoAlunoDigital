@@ -96,3 +96,4 @@ SELECT cron.schedule(
     '* * * * *', -- a cada minuto
     $$ SELECT cms.publicar_artigos_agendados(); $$
 );
+
