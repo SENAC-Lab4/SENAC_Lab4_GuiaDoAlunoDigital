@@ -47,14 +47,14 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_editor UUID;
-BEGIN
+BEGINo
     v_editor := COALESCE(
         NULLIF(current_setting('app.editor_id', true), '')::uuid,
         auth.uid(),
         OLD.autor_id  -- último recurso é o autor original
     );
     IF v_editor IS NULL THEN
-        RAISE EXCEPTION
+        RAISE EXCEPTIONo
             'Não foi possível identificar o editor do artigo % '
             '(defina app.editor_id na transação)', OLD.id;
     END IF;
@@ -62,7 +62,7 @@ BEGIN
     -- Guarda estado anterior (versão substituída)
     INSERT INTO cms.revisoes_de_artigos (artigo_id, editor_id, titulo, conteudo)
     VALUES (OLD.id, v_editor, OLD.titulo, OLD.conteudo);
-
+o
     RETURN NULL; -- depois de trigger, valor é ignorado
 END;
 $$;
